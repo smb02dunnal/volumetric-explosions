@@ -49,12 +49,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)DirectXTK\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)AntTweakBar\include;$(ProjectDir)DirectXTK\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>DirectXTK.debug.lib;d3dcompiler.lib;d3d11.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)DirectXTK;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>anttweakbar.lib;DirectXTK.debug.lib;d3dcompiler.lib;d3d11.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)AntTweakBar\lib;$(ProjectDir)DirectXTK;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
       <Command>xcopy $(ProjectDir)\noisevalues_32x32x32.txt $(OutDir) /r /y</Command>
@@ -63,7 +63,8 @@
     </CustomBuildStep>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)noise_32x32x32.dat" "$(OutDir)" /r /y &amp; 
-xcopy "$(ProjectDir)gradient.dds" "$(OutDir)" /r /y</Command>
+xcopy "$(ProjectDir)gradient.dds" "$(OutDir)" /r /y &amp;
+xcopy "$(ProjectDir)AntTweakBar\lib\*.dll" "$(OutDir)" /r /y </Command>
       <Message>Copy media to output.</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -75,14 +76,14 @@ xcopy "$(ProjectDir)gradient.dds" "$(OutDir)" /r /y</Command>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)DirectXTK\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)AntTweakBar\include;$(ProjectDir)DirectXTK\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>DirectXTK.lib;d3dcompiler.lib;d3d11.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)DirectXTK;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>anttweakbar.lib;DirectXTK.lib;d3dcompiler.lib;d3d11.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(ProjectDir)AntTweakBar\lib;$(ProjectDir)DirectXTK;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -94,7 +95,8 @@ xcopy "$(ProjectDir)gradient.dds" "$(OutDir)" /r /y</Command>
     </CustomBuildStep>
     <PostBuildEvent>
       <Command>xcopy "$(ProjectDir)noise_32x32x32.dat" "$(OutDir)" /r /y &amp; 
-xcopy "$(ProjectDir)gradient.dds" "$(OutDir)" /r /y</Command>
+xcopy "$(ProjectDir)gradient.dds" "$(OutDir)" /r /y &amp;
+xcopy "$(ProjectDir)AntTweakBar\lib\*.dll" "$(OutDir)" /r /y </Command>
       <Message>Copy media to output.</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>

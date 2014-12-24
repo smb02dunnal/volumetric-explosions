@@ -16,6 +16,8 @@
 #include <directxcolors.h>
 #include <fstream>
 #include <DDSTextureLoader.h>
+#include <AntTweakBar.h>
+
 #include "Common.h"
 
 using namespace DirectX;
@@ -53,16 +55,9 @@ ID3D11BlendState*           g_pOverBlendState = nullptr;
 // Explosion parameters. 
 const XMFLOAT3 kNoiseAnimationSpeed(0.0f, 0.02f, 0.0f);
 const float kNoiseInitialAmplitude = 3.0f;
-const float kNoiseAmplitudeFactor = 0.4f;
-const float kNoiseFrequencyFactor = 3.0f;
-const float kNoiseScale = 0.04f;
-const float kEdgeSoftness = 0.05f;
-const float kExplosionRadius = 4.0f;
-const float kDisplacementAmount = 1.4f;
 const UINT kMaxNumSteps = 256;
 const UINT kNumHullSteps = 2;
 const float kStepSize = 0.04f;
-const XMFLOAT2 kUvScaleBias(2.5f, -0.1f);
 const UINT kNumOctaves = 4;
 const UINT kNumHullOctaves = 2;
 const float kSkinThicknessBias = 0.6f;
@@ -70,6 +65,13 @@ const float kTessellationFactor = 16;
 float g_MaxSkinThickness;
 float g_MaxNoiseDisplacement;
 static bool g_EnableHullShrinking = true;
+static float g_EdgeSoftness = 0.05f;
+static float g_NoiseScale = 0.04f;
+static float g_ExplosionRadius = 4.0f;
+static float g_DisplacementAmount = 1.75f;
+static XMFLOAT2 g_UvScaleBias(2.1f, 0.35f);
+static float g_NoiseAmplitudeFactor = 0.4f;
+static float g_NoiseFrequencyFactor = 3.0f;
 
 // Camera variables.
 const UINT kResolutionX = 800;
@@ -90,6 +92,8 @@ __int64 g_CounterStart = 0;
 double g_CountsPerSecond = 0.0;
 double g_ElapsedTime = 0.0;
 
+TwBar* g_pUI;
+
 enum PrimitiveType
 {
     kPrimitiveSphere,
@@ -104,6 +108,7 @@ enum PrimitiveType
 //--------------------------------------------------------------------------------------
 HRESULT InitWindow( HINSTANCE hInstance, int nCmdShow );
 HRESULT InitDevice();
+void InitUI();
 void CleanupDevice();
 LRESULT CALLBACK    WndProc( HWND, UINT, WPARAM, LPARAM );
 void Render();
@@ -134,6 +139,11 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
 
     StartTimer();
 
+    TwInit(TW_DIRECT3D11, g_pd3dDevice);
+    TwWindowSize(kResolutionX, kResolutionY);
+    
+    InitUI();
+
     // Main message loop
     MSG msg = {0};
     while( WM_QUIT != msg.message )
@@ -151,6 +161,8 @@ int WINAPI wWinMain( _In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
             Render();
         }
     }
+
+    TwTerminate();
 
     CleanupDevice();
 
@@ -476,7 +488,7 @@ HRESULT InitDevice()
     g_MaxNoiseDisplacement = 0;
     for(UINT i=0 ; i<kNumOctaves ; i++)
     {
-        g_MaxNoiseDisplacement += largestAbsoluteNoiseValue * kNoiseInitialAmplitude * powf(kNoiseAmplitudeFactor, (float)i);
+        g_MaxNoiseDisplacement += largestAbsoluteNoiseValue * kNoiseInitialAmplitude * powf(g_NoiseAmplitudeFactor, (float)i);
     }
 
     // Calculate the skin thickness, which is amount of displacement to add 
@@ -484,7 +496,7 @@ HRESULT InitDevice()
     g_MaxSkinThickness = 0;
     for(UINT i=kNumHullOctaves ; i<kNumOctaves ; i++)
     {
-        g_MaxSkinThickness += largestAbsoluteNoiseValue * kNoiseInitialAmplitude * powf(kNoiseAmplitudeFactor, (float)i);
+        g_MaxSkinThickness += largestAbsoluteNoiseValue * kNoiseInitialAmplitude * powf(g_NoiseAmplitudeFactor, (float)i);
     }
     // Add a little bit extra to account for under-tessellation.  This should be
     //  fine tuned on a per use basis for best performance.
@@ -505,6 +517,22 @@ HRESULT InitDevice()
     return S_OK;
 }
 
+void InitUI()
+{
+    g_pUI = TwNewBar("Controls");
+    TwDefine(" GLOBAL help='Realistic Volumetric Explosions in Games\nGPU Pro 6\nAlex Dunn - 23/12/2014 \n\nHold the LMB and move the mouse to rotate the scene.\n\n' "); // Message added to the help bar.
+    int barSize[2] = {210, 180};
+    TwSetParam(g_pUI, NULL, "size", TW_PARAM_INT32, 2, barSize);
+    TwAddVarRW(g_pUI, "Use Tight Hull", TW_TYPE_BOOL8, &g_EnableHullShrinking, "");
+    TwAddVarRW(g_pUI, "Edge Softness", TW_TYPE_FLOAT, &g_EdgeSoftness, "min=0 max=1 step=0.001");
+    TwAddVarRW(g_pUI, "Radius", TW_TYPE_FLOAT, &g_ExplosionRadius, "min=0 max=8 step=0.01");
+    TwAddVarRW(g_pUI, "Displacement", TW_TYPE_FLOAT, &g_DisplacementAmount, "min=0 max=8 step=0.01");
+    TwAddVarRW(g_pUI, "Amplitude Factor", TW_TYPE_FLOAT, &g_NoiseAmplitudeFactor, "min=0 max=10 step=0.01");
+    TwAddVarRW(g_pUI, "Frequency Factor", TW_TYPE_FLOAT, &g_NoiseFrequencyFactor, "min=0 max=10 step=0.01");
+    TwAddVarRW(g_pUI, "Noise Scale", TW_TYPE_FLOAT, &g_NoiseScale, "min=0 max=1 step=0.001");
+    TwAddVarRW(g_pUI, "UV Scale", TW_TYPE_FLOAT, &g_UvScaleBias.x, "min=-10 max=10 step=0.01");
+    TwAddVarRW(g_pUI, "UV Bias", TW_TYPE_FLOAT, &g_UvScaleBias.y, "min=-10 max=10 step=0.01");
+}
 
 //--------------------------------------------------------------------------------------
 // Clean up the objects we've created
@@ -541,6 +569,8 @@ void CleanupDevice()
 //--------------------------------------------------------------------------------------
 LRESULT CALLBACK WndProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam )
 {
+    if( TwEventWin(hWnd, message, wParam, lParam) ) return 0;
+
     PAINTSTRUCT ps;
     HDC hdc;
 
@@ -678,23 +708,23 @@ void UpdateExplosionParams(ID3D11DeviceContext* const pContext)
         XMStoreFloat4x4( &((ExplosionParams *)MappedSubResource.pData)->g_ProjectionToWorldMatrix, g_ProjectionToWorldMatrix );
         XMStoreFloat4x4( &((ExplosionParams *)MappedSubResource.pData)->g_ViewToWorldMatrix, g_ViewToWorldMatrix );
         ((ExplosionParams *)MappedSubResource.pData)->g_EyePositionWS = g_EyePositionWS;
-        ((ExplosionParams *)MappedSubResource.pData)->g_NoiseAmplitudeFactor = kNoiseAmplitudeFactor;
+        ((ExplosionParams *)MappedSubResource.pData)->g_NoiseAmplitudeFactor = g_NoiseAmplitudeFactor;
         ((ExplosionParams *)MappedSubResource.pData)->g_EyeForwardWS = g_EyeForwardWS;
-        ((ExplosionParams *)MappedSubResource.pData)->g_NoiseScale = kNoiseScale;
+        ((ExplosionParams *)MappedSubResource.pData)->g_NoiseScale = g_NoiseScale;
         ((ExplosionParams *)MappedSubResource.pData)->g_ProjectionParams = g_ProjectionParams;
         ((ExplosionParams *)MappedSubResource.pData)->g_ScreenParams = XMFLOAT4((FLOAT)kResolutionX, (FLOAT)kResolutionY, 1.f/kResolutionX, 1.f/kResolutionY);
         ((ExplosionParams *)MappedSubResource.pData)->g_ExplosionPositionWS = kEyeLookAtWS;
-        ((ExplosionParams *)MappedSubResource.pData)->g_ExplosionRadiusWS = kExplosionRadius;
+        ((ExplosionParams *)MappedSubResource.pData)->g_ExplosionRadiusWS = g_ExplosionRadius;
         ((ExplosionParams *)MappedSubResource.pData)->g_NoiseAnimationSpeed = kNoiseAnimationSpeed;
         ((ExplosionParams *)MappedSubResource.pData)->g_Time = (float)g_ElapsedTime;
-        ((ExplosionParams *)MappedSubResource.pData)->g_EdgeSoftness = kEdgeSoftness;
-        ((ExplosionParams *)MappedSubResource.pData)->g_NoiseFrequencyFactor = kNoiseFrequencyFactor;
+        ((ExplosionParams *)MappedSubResource.pData)->g_EdgeSoftness = g_EdgeSoftness;
+        ((ExplosionParams *)MappedSubResource.pData)->g_NoiseFrequencyFactor = g_NoiseFrequencyFactor;
         ((ExplosionParams *)MappedSubResource.pData)->g_PrimitiveIdx = g_Primitive;
         ((ExplosionParams *)MappedSubResource.pData)->g_Opacity = 1.0f;
-        ((ExplosionParams *)MappedSubResource.pData)->g_DisplacementWS = kDisplacementAmount;
+        ((ExplosionParams *)MappedSubResource.pData)->g_DisplacementWS = g_DisplacementAmount;
         ((ExplosionParams *)MappedSubResource.pData)->g_StepSizeWS = kStepSize;
         ((ExplosionParams *)MappedSubResource.pData)->g_MaxNumSteps = kMaxNumSteps;
-        ((ExplosionParams *)MappedSubResource.pData)->g_UvScaleBias = kUvScaleBias;
+        ((ExplosionParams *)MappedSubResource.pData)->g_UvScaleBias = g_UvScaleBias;
         ((ExplosionParams *)MappedSubResource.pData)->g_NoiseInitialAmplitude = kNoiseInitialAmplitude;
         ((ExplosionParams *)MappedSubResource.pData)->g_InvMaxNoiseDisplacement = 1.0f/g_MaxNoiseDisplacement;
         ((ExplosionParams *)MappedSubResource.pData)->g_NumOctaves = kNumOctaves;
@@ -751,6 +781,8 @@ void Render()
     g_pImmediateContext->PSSetShaderResources( T_GRADIENT_TEX, 1, &g_pGradientSRV );
 
     g_pImmediateContext->Draw( 1, 0 );
+
+    TwDraw();
 
     g_pSwapChain->Present( 0, 0 );
 }
